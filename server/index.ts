@@ -6,27 +6,30 @@ import {
 } from "./registry";
 
 function getClientIP(req: Request, server?: { requestIP: (req: Request) => { address: string } | null }): string {
-    const forwarded = req.headers.get("x-forwarded-for");
-    if (forwarded) {
-        return forwarded.split(",")[0].trim();
-    }
-    const realIp = req.headers.get("x-real-ip");
-    if (realIp) {
-        return realIp;
-    }
-    if (server?.requestIP) {
-        const ipFromServer = server.requestIP(req)?.address;
-        if (ipFromServer && ipFromServer !== "::1" && ipFromServer !== "127.0.0.1") {
-            return ipFromServer;
+    const xForwardedFor = req.headers.get("x-forwarded-for");
+    if (xForwardedFor) {
+        const ips = xForwardedFor.split(",").map(ip => ip.trim()).filter(ip => ip);
+        if (ips.length > 0) {
+            return ips[0];
         }
     }
-    // For local VPS without reverse proxy, try to get IP from socket
-    const remoteAddress = req.headers.get("remote-addr") || 
-                          (req as any).socket?.remoteAddress ||
-                          (req as any).connection?.remoteAddress;
-    if (remoteAddress && remoteAddress !== "::1" && remoteAddress !== "127.0.0.1") {
-        return remoteAddress;
+    
+    const xRealIp = req.headers.get("x-real-ip");
+    if (xRealIp) {
+        return xRealIp;
     }
+    
+    if (server && typeof server.requestIP === "function") {
+        try {
+            const ip = server.requestIP(req);
+            if (ip && ip.address && ip.address !== "::1" && ip.address !== "127.0.0.1") {
+                return ip.address;
+            }
+        } catch (e) {
+            console.error("Error getting IP from server.requestIP:", e);
+        }
+    }
+    
     return "unknown";
 }
 

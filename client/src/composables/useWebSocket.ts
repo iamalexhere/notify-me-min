@@ -45,7 +45,7 @@ export function useWebSocket() {
         socket.onopen = () => {
             console.log('Connected to WebSocket');
             // Set local client ID for display purposes
-            clientId.value = nameParam || 'My IP Address (unknown locally)';
+            clientId.value = nameParam || 'My IP Address';
             // Fetch initial clients
             fetchClients();
         };

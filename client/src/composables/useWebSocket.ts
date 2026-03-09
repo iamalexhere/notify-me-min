@@ -91,7 +91,7 @@ export function useWebSocket() {
 
     const fetchClients = async () => {
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || `/api/clients`;
+            const apiUrl = import.meta.env.VITE_API_URL || `/clients`;
             const res = await fetch(apiUrl);
             const data = await res.json();
             clients.value = data.clients.filter((c: string) => c !== clientId.value);

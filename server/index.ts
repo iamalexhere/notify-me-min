@@ -5,7 +5,7 @@ import {
     getConnectedClientIds,
 } from "./registry";
 
-function getClientIP(req: Request): string {
+function getClientIP(req: Request, server?: { requestIP: (req: Request) => { address: string } | null }): string {
     const forwarded = req.headers.get("x-forwarded-for");
     if (forwarded) {
         return forwarded.split(",")[0].trim();
@@ -13,6 +13,9 @@ function getClientIP(req: Request): string {
     const realIp = req.headers.get("x-real-ip");
     if (realIp) {
         return realIp;
+    }
+    if (server?.requestIP) {
+        return server.requestIP(req)?.address || "unknown";
     }
     return "unknown";
 }
@@ -36,9 +39,10 @@ Bun.serve({
         // WebSocket upgrade endpoint
         if (url.pathname === "/ws") {
             const nameParam = url.searchParams.get("name");
-            const clientIp = getClientIP(req);
+            const clientIp = getClientIP(req, server);
             const socketId = nameParam || clientIp;
-
+            console.log(`[WS] nameParam=${nameParam}, clientIp=${clientIp}, socketId=${socketId}`);
+            
             const upgraded = server.upgrade(req, {
                 data: { name: socketId },
             });

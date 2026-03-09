@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref } from 'vue';
 
 export interface NotificationMsg {
     id: string;
@@ -91,7 +91,8 @@ export function useWebSocket() {
 
     const fetchClients = async () => {
         try {
-            const res = await fetch('/api/clients');
+            const apiUrl = import.meta.env.VITE_API_URL || `/api/clients`;
+            const res = await fetch(apiUrl);
             const data = await res.json();
             clients.value = data.clients.filter((c: string) => c !== clientId.value);
         } catch (err) {

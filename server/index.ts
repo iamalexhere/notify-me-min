@@ -5,7 +5,7 @@ import {
     getConnectedClientIds,
 } from "./registry";
 
-const PORT = 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 Bun.serve({
     port: PORT,
@@ -90,4 +90,4 @@ Bun.serve({
     },
 });
 
-console.log(`Server listening on http://localhost:${PORT}`);
+console.log(`Server listening on http://localhost:${PORT} (or http://0.0.0.0:${PORT} for LAN)`);

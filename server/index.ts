@@ -15,7 +15,17 @@ function getClientIP(req: Request, server?: { requestIP: (req: Request) => { add
         return realIp;
     }
     if (server?.requestIP) {
-        return server.requestIP(req)?.address || "unknown";
+        const ipFromServer = server.requestIP(req)?.address;
+        if (ipFromServer && ipFromServer !== "::1" && ipFromServer !== "127.0.0.1") {
+            return ipFromServer;
+        }
+    }
+    // For local VPS without reverse proxy, try to get IP from socket
+    const remoteAddress = req.headers.get("remote-addr") || 
+                          (req as any).socket?.remoteAddress ||
+                          (req as any).connection?.remoteAddress;
+    if (remoteAddress && remoteAddress !== "::1" && remoteAddress !== "127.0.0.1") {
+        return remoteAddress;
     }
     return "unknown";
 }

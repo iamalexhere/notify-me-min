@@ -13,23 +13,23 @@ function getClientIP(req: Request, server?: { requestIP: (req: Request) => { add
             return ips[0];
         }
     }
-    
+
     const xRealIp = req.headers.get("x-real-ip");
     if (xRealIp) {
         return xRealIp;
     }
-    
+
     if (server && typeof server.requestIP === "function") {
         try {
             const ip = server.requestIP(req);
-            if (ip && ip.address && ip.address !== "::1" && ip.address !== "127.0.0.1") {
+            if (ip && ip.address) {
                 return ip.address;
             }
         } catch (e) {
             console.error("Error getting IP from server.requestIP:", e);
         }
     }
-    
+
     return "unknown";
 }
 
@@ -53,13 +53,19 @@ Bun.serve({
         if (url.pathname === "/ws") {
             const nameParam = url.searchParams.get("name");
             const clientIp = getClientIP(req, server);
+
             const socketId = nameParam || clientIp;
             console.log(`[WS] nameParam=${nameParam}, clientIp=${clientIp}, socketId=${socketId}`);
-            
+
             const upgraded = server.upgrade(req, {
                 data: { name: socketId },
             });
-            if (upgraded) return undefined;
+
+            if (upgraded) {
+                return undefined;
+            }
+
+            return new Response("WebSocket upgrade failed", { status: 400 });
         }
 
         // Default response
@@ -71,6 +77,8 @@ Bun.serve({
             const id = ws.data.name;
             console.log(`[Connect] ${id}`);
             registerClient(id, ws);
+            // Tell the client its own assigned ID
+            ws.send(JSON.stringify({ type: "welcome", id }));
         },
 
         message(ws, message) {

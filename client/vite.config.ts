@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/api/, '')
         },
         '/ws': {
-          target: `ws://localhost:${env.VITE_API_PORT || 3001}`,
+          target: `http://localhost:${env.VITE_API_PORT || 3001}`,
           ws: true
         }
       }

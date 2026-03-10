@@ -33,9 +33,18 @@ export function useWebSocket() {
     };
 
     const connect = (nameParam?: string) => {
-        // Connect to WebSocket proxy
-        const wsUrl = new URL('/ws', window.location.href);
-        wsUrl.protocol = wsUrl.protocol.replace('http', 'ws');
+        // Connect directly to the Bun backend so it can see the real client IP.
+        // VITE_WS_URL overrides everything; otherwise construct from host + API port.
+        let wsUrl: URL;
+        const apiWsUrl = import.meta.env.VITE_WS_URL;
+        if (apiWsUrl) {
+            wsUrl = new URL(apiWsUrl);
+        } else {
+            const apiPort = import.meta.env.VITE_API_PORT || '3001';
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Use the same hostname the browser used but point at the Bun port
+            wsUrl = new URL(`${protocol}//${window.location.hostname}:${apiPort}/ws`);
+        }
         if (nameParam) {
             wsUrl.searchParams.set('name', nameParam);
         }
@@ -44,17 +53,18 @@ export function useWebSocket() {
 
         socket.onopen = () => {
             console.log('Connected to WebSocket');
-            // Set local client ID for display purposes
-            clientId.value = nameParam || 'My IP Address';
-            // Fetch initial clients
-            fetchClients();
+            // clientId will be set by the 'welcome' message from the server
         };
 
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
 
-                if (data.type === 'clients_update') {
+                if (data.type === 'welcome') {
+                    // Server tells us our assigned socket ID (real IP or ?name= param)
+                    clientId.value = data.id;
+                    fetchClients();
+                } else if (data.type === 'clients_update') {
                     clients.value = data.clients.filter((c: string) => c !== clientId.value);
                 } else if (data.type === 'notify') {
                     // Received a notification
@@ -91,8 +101,9 @@ export function useWebSocket() {
 
     const fetchClients = async () => {
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || `/clients`;
+            const apiUrl = import.meta.env.VITE_API_URL || `/api/clients`;
             const res = await fetch(apiUrl);
+            if (!res.ok) throw new Error("Failed to fetch clients");
             const data = await res.json();
             clients.value = data.clients.filter((c: string) => c !== clientId.value);
         } catch (err) {
